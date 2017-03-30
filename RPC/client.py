@@ -17,8 +17,6 @@ class Connection:
             self._sock = socket.socket()
             err = self._sock.connect_ex(tuple([self.ip, self.port]))
 
-            print self._sock.fileno(), self.send("123")
-
             if not err:
                 return self._sock.fileno()
 
