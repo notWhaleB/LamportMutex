@@ -11,6 +11,7 @@ class Listener:
         self._sock = socket.socket()
         self._clients = []
 
+        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.bind((self.ip, self.port))
         self._sock.listen(backlog_sz)
 
