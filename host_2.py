@@ -5,9 +5,9 @@ import os
 from RPC.rpc import RPC, EV_STDIN, EV_REMOTE
 from RPC import commands
 
-SELF_ADDR = ('127.0.0.1', 1234)
+SELF_ADDR = ('127.0.0.1', 1235)
 OTHERS_ADDR = [
-    ('127.0.0.1', 1235),
+    ('127.0.0.1', 1234),
     ('127.0.0.1', 1236)
 ]
 

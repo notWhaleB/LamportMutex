@@ -5,9 +5,9 @@ import socket
 _BACKLOG_SZ = 256
 
 class Listener:
-    def __init__(self, id, addrs, backlog_sz=_BACKLOG_SZ):
-        self.ip = addrs[id][0]
-        self.port = addrs[id][1]
+    def __init__(self, ip, port, backlog_sz=_BACKLOG_SZ):
+        self.ip = ip
+        self.port = port
         self._sock = socket.socket()
         self._clients = []
 
