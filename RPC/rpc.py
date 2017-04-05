@@ -10,9 +10,9 @@ import serialize
 import commands
 from poll import Poll
 
-EV_REMOTE = 1
-EV_STDIN = 2
-_BUFFER_SZ = 1024
+EV_UNDEF = -1
+EV_REMOTE = 0
+
 
 class RPC:
     def __init__(self, self_addr, others_addrs):
@@ -22,6 +22,7 @@ class RPC:
         self._server = server.Listener(*self_addr)
         self._clients = defaultdict(int)
         self._poll = Poll()
+        self._handlers = dict()
 
         for (ip, port) in self.addrs:
             host = client.Connection(ip, port)
@@ -30,6 +31,7 @@ class RPC:
         self.hosts_ids = self._hosts.keys()
 
         for cl in self._server.accept_clients(self.n_hosts):
+            self.reg_for_poll(cl, self._rpc_handler, ev_id=EV_REMOTE)
             self._poll.reg(cl)
 
         for host in self.hosts_ids:
@@ -52,6 +54,20 @@ class RPC:
 
             self._clients[fd] = self.host_by_addr[addr]
 
+    def _rpc_handler(self, ev_id, fd):
+        msg = RPC.read_one_msg(fd)
+        if not msg:
+            return True
+        cmd, args = serialize.unserialize(msg)
+        cmd = int(cmd)
+
+        if cmd == commands.STOP:
+            return False
+
+        host_id = self.get_host_id(fd)
+
+        return EV_REMOTE, host_id, cmd, args
+
     def get_host_id(self, client_fd):
         return self._clients[client_fd]
 
@@ -69,28 +85,24 @@ class RPC:
     def send_to(self, host_id, cmd, *args):
         self._hosts[host_id].send(cmd, *args)
 
-    def events_loop(self, attach_stdin=True, buffer_sz=_BUFFER_SZ):
-        if attach_stdin:
-            self._poll.reg(sys.stdin.fileno())
+    def reg_for_poll(self, fd, handler, ev_id=EV_UNDEF):
+        self._handlers[fd] = (handler, ev_id)
+        self._poll.reg(fd)
 
+
+    def events_loop(self):
         while True:
             fd = self._poll.wait_one()
+            handler, ev_id = self._handlers[fd]
 
-            if fd == sys.stdin.fileno():
-                yield EV_STDIN, fd
-            else:
-                msg = RPC.read_one_msg(fd)
-                if not msg:
+            status = handler(ev_id, fd)
+            if isinstance(status, bool):
+                if status:
                     continue
-                cmd, args = serialize.unserialize(msg)
-                cmd = int(cmd)
-
-                if cmd == commands.STOP:
+                else:
                     break
 
-                host_id = self.get_host_id(fd)
-
-                yield EV_REMOTE, host_id, cmd, args
+            yield status
 
         self._server.close()
         for client_ in self._hosts.values():
