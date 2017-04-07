@@ -32,7 +32,6 @@ class RPC:
 
         for cl in self._server.accept_clients(self.n_hosts):
             self.reg_for_poll(cl, self._rpc_handler, ev_id=EV_REMOTE)
-            self._poll.reg(cl)
 
         for host in self.hosts_ids:
             self.send_to(host, commands.ID, *self_addr)

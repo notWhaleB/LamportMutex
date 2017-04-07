@@ -6,10 +6,20 @@ import sys
 import signal
 import heapq
 import fcntl
+import errno
+from time import sleep
 
 from RPC.rpc import RPC, EV_REMOTE
 from RPC import commands
 
+def log(text):
+    while True:
+        try:
+            print(text)
+            break
+        except (IOError, OSError) as e:
+            if e.errno != errno.EINTR:
+                raise
 
 class LamportBase:
     def __init__(self, stress_mode=False):
@@ -21,16 +31,14 @@ class LamportBase:
         self.EV_REMOTE = 0
         self.stress_mode = stress_mode
 
-        pipe_r, pipe_w = os.pipe()
-        flags = fcntl.fcntl(pipe_w, fcntl.F_GETFL, 0)
+        self._pipe_r, self._pipe_w = os.pipe()
+        flags = fcntl.fcntl(self._pipe_w, fcntl.F_GETFL, 0)
         flags = flags | os.O_NONBLOCK
-        fcntl.fcntl(pipe_w, fcntl.F_SETFL, flags)
+        fcntl.fcntl(self._pipe_w, fcntl.F_SETFL, flags)
 
-        signal.set_wakeup_fd(pipe_w)
+        signal.set_wakeup_fd(self._pipe_w)
         signal.signal(signal.SIGALRM, lambda *_: None)
         signal.setitimer(signal.ITIMER_REAL, 1, 1)
-
-        self.reg_for_poll(pipe_r, self._timer_handler, ev_id=self.EV_TIMER)
 
     @staticmethod
     def parse_addr(addr_str):
@@ -39,6 +47,9 @@ class LamportBase:
 
     def enable_console(self):
         self.reg_for_poll(sys.stdin.fileno(), LamportBase._stdin_handler, self.EV_STDIN)
+        
+    def enable_timer(self):
+        self.reg_for_poll(self._pipe_r, self._timer_handler, ev_id=self.EV_TIMER)
 
     @staticmethod
     def _stdin_handler(ev_id, fd):
@@ -87,7 +98,6 @@ class LamportBase:
                 continue
 
             host_id, cmd, args = ev_data[0], ev_data[1], ev_data[2]
-            print(commands.names[cmd], ev_data)
 
             if cmd == commands.REQ:
                 clock = int(args[0])
@@ -109,11 +119,11 @@ class LamportBase:
 
             if cmd in [commands.RES, commands.REL]:
                 if not self._requests and self._queue[0][1] == self.host_index(self.host_id()):
-                    print(">>>>> CS enter")
+                    log("[{}] >>>>> CS enter".format(self.host_index(self.host_id())))
 
                     self._critical_section(os.getpid(), self._clock)
 
-                    print("<<<<< CS exit")
+                    log("[{}] <<<<< CS exit".format(self.host_index(self.host_id())))
 
                     self.send_all(commands.REL, self._clock)
                     for host_id in self.hosts():
@@ -176,6 +186,7 @@ class LamportRPC(LamportBase):
         mutex_file = open("mutex.txt", "w")
         fcntl.flock(mutex_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
         mutex_file.write("{} {}".format(pid, clock))
+        sleep(0.01)
         fcntl.flock(mutex_file, fcntl.LOCK_UN)
         mutex_file.close()
 
