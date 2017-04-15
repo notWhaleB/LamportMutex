@@ -10,6 +10,7 @@ import errno
 from time import sleep
 
 from RPC.rpc import RPC, EV_REMOTE
+from RPC.local import Local
 from RPC import commands
 
 def log(text):
@@ -20,6 +21,7 @@ def log(text):
         except (IOError, OSError) as e:
             if e.errno != errno.EINTR:
                 raise
+
 
 class LamportBase:
     def __init__(self, stress_mode=False):
@@ -192,3 +194,21 @@ class LamportRPC(LamportBase):
 
     def _transport_loop(self):
         return self._rpc.events_loop()
+
+
+class LamportLocal(LamportRPC):
+    def __init__(self, self_id, other_ids, pipes_r, pipes_w, stress_mode=False):
+        self.EV_REMOTE = EV_REMOTE
+
+        self._rpc = Local(self_id, other_ids, pipes_r, pipes_w)
+        self._host_id = self._rpc.host_by_id[self_id]
+
+        LamportBase.__init__(self, stress_mode)
+
+        for host_id in self._rpc.hosts_ids:
+            self._requests.add(host_id)
+
+        self._host_index = {host_id: idx for idx, host_id in enumerate(self._rpc.host_by_id)}
+
+        if stress_mode:
+            self.send_all(commands.REQ, self._clock)

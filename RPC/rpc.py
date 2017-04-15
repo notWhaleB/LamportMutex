@@ -18,8 +18,12 @@ class RPC:
     def __init__(self, self_addr, others_addrs):
         self.addrs = [self_addr] + others_addrs
         self.n_hosts = len(self.addrs)
+
+        # host_id (fd) -> one-sided write connection to host
         self._hosts = defaultdict(client.Connection)
         self._server = server.Listener(*self_addr)
+
+        # incoming fd -> host_id (fd)
         self._clients = defaultdict(int)
         self._poll = Poll()
         self._handlers = dict()
@@ -87,7 +91,6 @@ class RPC:
     def reg_for_poll(self, fd, handler, ev_id=EV_UNDEF):
         self._handlers[fd] = (handler, ev_id)
         self._poll.reg(fd)
-
 
     def events_loop(self):
         while True:
