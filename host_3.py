@@ -1,8 +1,8 @@
 import os
 import sys
 
-from lamport import LamportRPC
 import RPC.commands as commands
+from Lamport.lamport_rpc import LamportRPC
 
 ID = 3
 ports = [(ID + i) % 3 + 1230 for i in range(3)]

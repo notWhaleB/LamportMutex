@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import os
-import serialize
-import commands
+import RPC.serialize
+import RPC.commands
 
-from poll import Poll
+from RPC.poll import Poll
 
 EV_UNDEF = -1
 EV_REMOTE = 0
@@ -27,10 +27,10 @@ class Local:
         msg = Local.read_one_msg(fd)
         if not msg:
             return True
-        cmd, args = serialize.unserialize(msg)
+        cmd, args = RPC.serialize.unserialize(msg)
         cmd = int(cmd)
 
-        if cmd == commands.STOP:
+        if cmd == RPC.commands.STOP:
             return False
 
         host_id = self.get_host_id(fd)
@@ -52,7 +52,7 @@ class Local:
         return msg
 
     def send_to(self, host_id, cmd, *args):
-        os.write(self._hosts[host_id], serialize.serialize(cmd, *args))
+        os.write(self._hosts[host_id], RPC.serialize.serialize(cmd, *args))
 
     def reg_for_poll(self, fd, handler, ev_id=EV_UNDEF):
         self._handlers[fd] = (handler, ev_id)
