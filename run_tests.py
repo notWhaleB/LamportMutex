@@ -1,3 +1,9 @@
-from tests.unit_lamport import test_unit_lamport
+from __future__ import print_function
 
-test_unit_lamport.run_test(3)
+from tests.unit_lamport import test
+
+print("Unit test started.")
+
+test.run_test(N=5)
+
+print("Unit test done.")

@@ -1,11 +1,15 @@
+from __future__ import print_function
+
 import os
 import sys
 from multiprocessing import Process
+from threading import Thread
+from time import sleep
 
-from lamport_local import LamportLocal
+from lamport import LamportLocal
 import RPC.commands as commands
 
-def run_test(N=3):
+def run_test(N=3, timeout=5):
     pipes_r = []
     pipes_w = []
 
@@ -16,8 +20,19 @@ def run_test(N=3):
             stress_mode=True
         )
 
+        thr = None
         if console:
             lamport.enable_console()
+
+            def stopper():
+                for i in range(timeout):
+                    sleep(1)
+                    print("Running... {}s left.".format(timeout - i - 1))
+                print("Stopping...")
+                lamport.send_all(commands.STOP)
+
+            thr = Thread(target=stopper)
+            thr.start()
 
         for ev in lamport.events_loop():
             ev_name, ev_data = ev[0], ev[1:]
@@ -42,6 +57,9 @@ def run_test(N=3):
                     lamport.send_all(commands.STOP)
                 else:
                     print("Command not found: {}".format(buf))
+
+        if console:
+            thr.join()
         sys.exit(0)
 
     for i in range(N):

@@ -6,7 +6,7 @@ from Lamport.lamport_rpc import LamportRPC
 from RPC import commands
 from RPC.rpc import EV_REMOTE
 
-from local_transport import Local
+from transport import Local
 
 
 class LamportLocal(LamportRPC):

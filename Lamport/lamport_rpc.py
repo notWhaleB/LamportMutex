@@ -1,4 +1,5 @@
 import fcntl
+import errno
 from time import sleep
 
 from Lamport.lamport import LamportBase
@@ -25,6 +26,18 @@ class LamportRPC(LamportBase):
         if stress_mode:
             self.send_all(commands.REQ, self._clock)
 
+    def log(self, text):
+        while True:
+            try:
+                self.logger.info(text, extra={
+                    'lclock': '{:06}'.format(self._clock),
+                    'host_idx': self.host_index(self._host_id)
+                })
+                break
+            except (IOError, OSError) as e:
+                if e.errno != errno.EINTR:
+                    raise
+
     def host_id(self):
         return self._host_id
 
@@ -40,11 +53,17 @@ class LamportRPC(LamportBase):
     def send(self, host_id, cmd, *args):
         self._clock += 1
         self._rpc.send_to(host_id, cmd, *args)
+        self.log(">> {} >> [{}]".format(
+            commands.names[cmd], self.host_index(host_id)
+        ))
 
     def send_all(self, cmd, *args):
         self._clock += 1
         for host_id in self._rpc.hosts_ids:
             self._rpc.send_to(host_id, cmd, *args)
+            self.log(">> {} >> [{}]".format(
+                commands.names[cmd], self.host_index(host_id)
+            ))
 
     def acquire(self):
         self.send_all(commands.REQ, self._clock)

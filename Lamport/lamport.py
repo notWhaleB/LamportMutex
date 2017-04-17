@@ -6,18 +6,19 @@ import signal
 import heapq
 import fcntl
 import errno
+import logging
+from datetime import datetime
 
 from RPC import commands
 
-def log(text):
-    while True:
-        try:
-            print(text)
-            break
-        except (IOError, OSError) as e:
-            if e.errno != errno.EINTR:
-                raise
+LOGS_DIR = "logs/{}".format(
+    datetime.utcnow().isoformat().replace(':', '_')
+)
 
+os.makedirs(LOGS_DIR)
+formatter = logging.Formatter(
+    '%(asctime)s  %(lclock)-6s  %(process)-6d [%(host_idx)d] %(message)s'
+)
 
 class LamportBase:
     def __init__(self, stress_mode=False):
@@ -29,6 +30,13 @@ class LamportBase:
         self.EV_REMOTE = 0
         self.stress_mode = stress_mode
 
+        handler = logging.FileHandler('{}/pid_{}.log'.format(LOGS_DIR, os.getpid()))
+        handler.setFormatter(formatter)
+
+        self.logger = logging.getLogger(str(os.getpid()))
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(handler)
+
         self._pipe_r, self._pipe_w = os.pipe()
         flags = fcntl.fcntl(self._pipe_w, fcntl.F_GETFL, 0)
         flags = flags | os.O_NONBLOCK
@@ -37,6 +45,9 @@ class LamportBase:
         signal.set_wakeup_fd(self._pipe_w)
         signal.signal(signal.SIGALRM, lambda *_: None)
         signal.setitimer(signal.ITIMER_REAL, 1, 1)
+
+    def log(self, text):
+        raise NotImplementedError
 
     @staticmethod
     def parse_addr(addr_str):
@@ -97,6 +108,10 @@ class LamportBase:
 
             host_id, cmd, args = ev_data[0], ev_data[1], ev_data[2]
 
+            self.log("<< {} << [{}]".format(
+                commands.names[cmd], self.host_index(host_id)
+            ))
+
             if cmd == commands.REQ:
                 clock = int(args[0])
                 self._clock = max(self._clock + 1, clock)
@@ -117,11 +132,12 @@ class LamportBase:
 
             if cmd in [commands.RES, commands.REL]:
                 if not self._requests and self._queue[0][1] == self.host_index(self.host_id()):
-                    log("[{}] >>>>> CS enter".format(self.host_index(self.host_id())))
+                    self.log("{CS_ENTER}")
 
+                    self._clock += 1
                     self._critical_section(os.getpid(), self._clock)
 
-                    log("[{}] <<<<< CS exit".format(self.host_index(self.host_id())))
+                    self.log("{CS_EXIT}")
 
                     self.send_all(commands.REL, self._clock)
                     for host_id in self.hosts():
