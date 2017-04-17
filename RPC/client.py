@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
+
 
 import socket
+import sys
 from time import sleep
+
 from serialize import serialize
 
 _MX_RETRIES = 10
@@ -28,4 +32,9 @@ class Connection:
         self._sock.close()
 
     def send(self, cmd, *args):
-        self._sock.send(serialize(cmd, *args))
+        try:
+            self._sock.send(serialize(cmd, *args))
+        except socket.error as e:
+            if (e.errno == socket.errno.EPIPE):
+                print("Broken pipe.")
+                sys.exit(0)

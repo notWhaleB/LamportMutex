@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
+from time import sleep
 from collections import defaultdict
 
 import server
@@ -106,6 +106,7 @@ class RPC:
 
             yield status
 
+        sleep(1)
         self._server.close()
         for client_ in self._hosts.values():
             client_.close()

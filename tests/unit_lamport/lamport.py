@@ -10,13 +10,19 @@ from transport import Local
 
 
 class LamportLocal(LamportRPC):
-    def __init__(self, self_id, other_ids, pipes_r, pipes_w, stress_mode=False):
+    def __init__(
+        self, self_id, other_ids, pipes_r, pipes_w,
+        stress_mode=False, logs_dir=None
+    ):
         self.EV_REMOTE = EV_REMOTE
 
         self._rpc = Local(self_id, other_ids, pipes_r, pipes_w)
         self._host_id = self._rpc.host_by_id[self_id]
 
-        LamportBase.__init__(self, stress_mode)
+        if logs_dir is not None:
+            LamportBase.__init__(self, stress_mode, logs_dir=logs_dir)
+        else:
+            LamportBase.__init__(self, stress_mode)
 
         for host_id in self._rpc.hosts_ids:
             self._requests.add(host_id)

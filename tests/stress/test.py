@@ -7,13 +7,10 @@ from threading import Thread
 from time import sleep
 from datetime import datetime
 
-from lamport import LamportLocal
+from Lamport.lamport_rpc import LamportRPC
 import RPC.commands as commands
 
 def run_test(N=3, timeout=5):
-    pipes_r = []
-    pipes_w = []
-
     logs_dir = "logs/{}".format(
         datetime.utcnow().isoformat().replace(':', '_')
     )
@@ -22,11 +19,12 @@ def run_test(N=3, timeout=5):
         os.makedirs(logs_dir)
 
     def instance(self_id, n, console=False):
-        lamport = LamportLocal(
-            self_id, [i for i in range(n) if i != self_id],
-            pipes_r[self_id], pipes_w[self_id],
-            stress_mode=True, logs_dir=logs_dir
-        )
+        ports = [(self_id + i) % n + 1230 for i in range(n)]
+        addrs = [("127.0.0.1", port) for port in ports]
+        self_addr = addrs[0]
+        other_addrs = addrs[1:]
+
+        lamport = LamportRPC(self_addr, other_addrs, stress_mode=True, logs_dir=logs_dir)
 
         thr = None
         if console:
@@ -68,17 +66,8 @@ def run_test(N=3, timeout=5):
 
         if console:
             thr.join()
+        sleep(1)
         sys.exit(0)
-
-    for i in range(N):
-        pipes_r.append([None] * N)
-        pipes_w.append([None] * N)
-
-    for i in range(N):
-        for j in range(N):
-            pipe_r, pipe_w = os.pipe()
-            pipes_r[i][j] = pipe_r
-            pipes_w[j][i] = pipe_w
 
     processes = []
 

@@ -7,13 +7,16 @@ from RPC import commands
 from RPC.rpc import RPC, EV_REMOTE
 
 class LamportRPC(LamportBase):
-    def __init__(self, self_addr, other_addrs, stress_mode=False):
+    def __init__(self, self_addr, other_addrs, stress_mode=False, logs_dir=None):
         self.EV_REMOTE = EV_REMOTE
 
         self._rpc = RPC(self_addr, other_addrs)
         self._host_id = self._rpc.host_by_addr[self_addr]
 
-        LamportBase.__init__(self, stress_mode)
+        if logs_dir is not None:
+            LamportBase.__init__(self, stress_mode, logs_dir=logs_dir)
+        else:
+            LamportBase.__init__(self, stress_mode)
 
         for host_id in self._rpc.hosts_ids:
             self._requests.add(host_id)

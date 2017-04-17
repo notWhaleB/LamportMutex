@@ -15,13 +15,8 @@ LOGS_DIR = "logs/{}".format(
     datetime.utcnow().isoformat().replace(':', '_')
 )
 
-os.makedirs(LOGS_DIR)
-formatter = logging.Formatter(
-    '%(asctime)s  %(lclock)-6s  %(process)-6d [%(host_idx)d] %(message)s'
-)
-
 class LamportBase:
-    def __init__(self, stress_mode=False):
+    def __init__(self, stress_mode=False, logs_dir=LOGS_DIR):
         self._clock = 0
         self._requests = set()
         self._queue = []
@@ -30,7 +25,11 @@ class LamportBase:
         self.EV_REMOTE = 0
         self.stress_mode = stress_mode
 
-        handler = logging.FileHandler('{}/pid_{}.log'.format(LOGS_DIR, os.getpid()))
+        formatter = logging.Formatter(
+            '%(asctime)s  %(lclock)-6s  %(process)-6d [%(host_idx)d] %(message)s'
+        )
+
+        handler = logging.FileHandler('{}/pid_{}.log'.format(logs_dir, os.getpid()))
         handler.setFormatter(formatter)
 
         self.logger = logging.getLogger(str(os.getpid()))
