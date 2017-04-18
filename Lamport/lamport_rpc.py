@@ -27,6 +27,7 @@ class LamportRPC(LamportBase):
         }
 
         if stress_mode:
+            sleep(1)
             self.send_all(commands.REQ, self._clock)
 
     def log(self, text):

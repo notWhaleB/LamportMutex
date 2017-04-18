@@ -26,7 +26,7 @@ class LamportBase:
         self.stress_mode = stress_mode
 
         formatter = logging.Formatter(
-            '%(asctime)s  %(lclock)-6s  %(process)-6d [%(host_idx)d] %(message)s'
+            '%(lclock)-6s  %(asctime)s  %(process)-6d [%(host_idx)d] %(message)s'
         )
 
         handler = logging.FileHandler('{}/pid_{}.log'.format(logs_dir, os.getpid()))
@@ -133,7 +133,6 @@ class LamportBase:
                 if not self._requests and self._queue[0][1] == self.host_index(self.host_id()):
                     self.log("{CS_ENTER}")
 
-                    self._clock += 1
                     self._critical_section(os.getpid(), self._clock)
 
                     self.log("{CS_EXIT}")

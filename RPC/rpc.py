@@ -43,6 +43,7 @@ class RPC:
         self.host_by_addr = {
             (conn.ip, conn.port): host_id for (host_id, conn) in self._hosts.items()
         }
+        
 
         while len(self._clients) != self.n_hosts:
             fd = self._poll.wait_one()
@@ -50,10 +51,11 @@ class RPC:
             msg = RPC.read_one_msg(fd)
             cmd, addr = serialize.unserialize(msg)
             cmd = int(cmd)
-            addr = tuple([addr[0], int(addr[1])])
 
             if cmd != commands.ID:
                 raise RuntimeError("Initial message from host missed.")
+                
+            addr = tuple([addr[0], int(addr[1])])
 
             self._clients[fd] = self.host_by_addr[addr]
 
